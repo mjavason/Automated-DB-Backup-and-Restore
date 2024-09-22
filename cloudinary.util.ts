@@ -64,6 +64,7 @@ export const listFilesInCloudinaryFolder = async (
     const result = await cloudinaryInstance.api.resources({
       type: 'upload',
       prefix: folder,
+      resource_type: 'raw', // This stuff stressed me
     });
     return result;
   } catch (error) {
@@ -113,21 +114,27 @@ export const deleteCloudinaryFolder = async (folder: string): Promise<any> => {
   }
 };
 
-export const fetchLatestUploadedFileInFolder = async (
+export async function fetchLatestUploadedFileInFolder(
   folder: string = 'Uploads'
-) => {
+) {
   try {
+    // Fetch all resources in the folder
     const response = await cloudinaryInstance.api.resources({
       type: 'upload',
       prefix: folder,
-      max_results: 1, // We only want the latest file
-      sort: 'created_at', // Sort by creation date
-      direction: 'desc', // Get the most recent first
-      resource_type: 'raw' // This stuff stressed me
+      max_results: 500, // Get as many results as allowed (500 is the limit per request)
+      resource_type: 'raw', // We're looking for raw files
     });
 
     if (response.resources.length > 0) {
-      const latestFile = response.resources[0];
+      // Sort files manually by 'created_at'
+      const sortedFiles = response.resources.sort(
+        (a: any, b: any) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+
+      // Get the latest file
+      const latestFile = sortedFiles[0];
       console.log('Latest uploaded file:', latestFile);
       return latestFile;
     } else {
@@ -135,6 +142,7 @@ export const fetchLatestUploadedFileInFolder = async (
       return null;
     }
   } catch (error) {
-    console.error('Error fetching latest uploaded file:', error);
+    console.error('Error fetching files from folder:', error);
+    return null;
   }
-};
+}

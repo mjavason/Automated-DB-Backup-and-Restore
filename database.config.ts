@@ -1,5 +1,6 @@
 import axios from 'axios';
-import fs from 'fs/promises';
+import fs from 'fs'; // Use 'fs' instead of 'fs/promises' for stream operations
+import fsPromises from 'fs/promises'; // Keep this for promise-based operations
 import path from 'path';
 import sqlite3 from 'better-sqlite3';
 import { Profile, User } from './user.model';
@@ -13,9 +14,9 @@ const databaseFile = 'database.sqlite';
 const backupDatabaseFile = 'backup-database.sqlite';
 
 export const sequelize = new Sequelize({
-  dialect: 'sqlite', // Choose your database dialect
+  dialect: 'sqlite',
   storage: `./${databaseFile}`,
-  logging: false,
+  // logging: false,
   dialectOptions: {
     ssl: {
       require: true,
@@ -29,7 +30,7 @@ export const sequelize = new Sequelize({
 export async function testConnection() {
   try {
     await sequelize.authenticate();
-    console.log('Database connection has been established successfully.');
+    console.log('Database connection established successfully.');
   } catch (error: any) {
     console.error('Unable to connect to the database:', error.message);
   }
@@ -38,9 +39,13 @@ export async function testConnection() {
 // Initialize Database
 export async function initDB() {
   try {
-    await restoreBackup();
-    await sequelize.sync({ force: false, alter: true }); // `force: true` will drop tables
-    console.log('Database synced successfully');
+    const backupRestored = await restoreBackup();
+    if (backupRestored) {
+      await sequelize.sync({ force: false, alter: true });
+      console.log('Database synced successfully');
+    } else {
+      console.log('Backup restoration failed; sync skipped.');
+    }
   } catch (err) {
     console.error('Unable to sync database:', err);
   }
@@ -49,23 +54,47 @@ export async function initDB() {
 // Function to copy the SQLite database file
 export async function copyDatabaseFile() {
   const db = sqlite3(databaseFile);
-  const file = await db.backup(backupDatabaseFile);
-  return file;
+  await db.backup(backupDatabaseFile);
 }
 
+// Function to get the size of the current database file
+async function getCurrentDatabaseSize(): Promise<number> {
+  const stats = await fsPromises.stat(databaseFile);
+  return stats.size;
+}
+
+// Function to get the latest backup size and etag from Cloudinary
+async function getLatestBackupInfo(): Promise<{
+  size: number;
+  etag: string;
+} | null> {
+  const latest = await fetchLatestUploadedFileInFolder('Backups');
+  return latest ? { size: latest.bytes, etag: latest.etag } : null;
+}
+
+// Create Backup with size and etag comparison
 export async function createBackup() {
   console.log('Creating backup');
-  const isCopied = await copyDatabaseFile();
-  console.log('Uploading backup to cloudinary');
-  if (isCopied)
-    return await uploadRawFileToCloudinary(backupDatabaseFile, 'Backups');
+
+  const currentSize = await getCurrentDatabaseSize();
+  const latestBackupInfo = await getLatestBackupInfo();
+  console.log({ currentSize, latestBackupInfo });
+
+  // Compare size and etag
+  if (latestBackupInfo && currentSize == latestBackupInfo.size) {
+    console.log('No changes detected. Backup not created.');
+    return;
+  }
+
+  await copyDatabaseFile();
+  console.log('Uploading backup to Cloudinary');
+  await uploadRawFileToCloudinary(backupDatabaseFile, 'Backups');
 }
 
+// Restore Backup
 export async function restoreBackup(): Promise<boolean> {
   try {
-    // Fetch the latest backup file
     const latest = await fetchLatestUploadedFileInFolder('Backups');
-
     if (!latest) {
       console.log('No backup found in the folder.');
       return false;
@@ -74,11 +103,10 @@ export async function restoreBackup(): Promise<boolean> {
     const fileUrl = latest.secure_url; // Cloudinary URL of the latest file
     const outputFilePath = path.join(__dirname, databaseFile); // Local file path
 
-    // Check if the file exists, and remove it if it does
+    // Remove existing database file if it exists
     try {
-      await fs.access(outputFilePath); // Check file existence
-      console.log('Existing database file found. Deleting it...');
-      await fs.unlink(outputFilePath); // Delete the file
+      await fsPromises.unlink(outputFilePath);
+      console.log('Existing database file deleted.');
     } catch (error: any) {
       if (error.code !== 'ENOENT') throw error; // Ignore if file doesn't exist
     }
@@ -87,21 +115,19 @@ export async function restoreBackup(): Promise<boolean> {
     const response = await axios({
       url: fileUrl,
       method: 'GET',
-      responseType: 'stream', // Stream the response directly to the file system
+      responseType: 'stream',
     });
 
-    const writer = await fs.open(outputFilePath, 'w');
-    response.data.pipe(writer.createWriteStream());
+    const writer = fs.createWriteStream(outputFilePath);
+    response.data.pipe(writer);
 
-    // Return a Promise that resolves when the download completes
     return new Promise<boolean>((resolve, reject) => {
-      response.data.on('end', () => {
+      writer.on('finish', () => {
         console.log('Backup restored successfully.');
-        writer.close();
         resolve(true);
       });
 
-      response.data.on('error', (err: any) => {
+      writer.on('error', (err: any) => {
         console.error('Error during download:', err);
         reject(false);
       });
@@ -112,4 +138,5 @@ export async function restoreBackup(): Promise<boolean> {
   }
 }
 
-setInterval(() => createBackup(), 1000 * 60 * 60); //create backups every hour
+// Set up periodic backups
+// setInterval(createBackup, 1000 * 60); // Create backups every hour
