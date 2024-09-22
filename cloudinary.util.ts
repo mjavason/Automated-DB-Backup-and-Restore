@@ -25,7 +25,7 @@ export const uploadRawFileToCloudinary = async (
       resource_type: 'raw', // Set resource type to 'raw'
       folder,
     });
-    console.log('Uploaded successfully:', uploadResult);
+    // console.log('Uploaded successfully:', uploadResult);
     return uploadResult;
   } catch (error) {
     console.error('Error uploading to Cloudinary:', error);
@@ -135,7 +135,7 @@ export async function fetchLatestUploadedFileInFolder(
 
       // Get the latest file
       const latestFile = sortedFiles[0];
-      console.log('Latest uploaded file:', latestFile);
+      // console.log('Latest uploaded file:', latestFile);
       return latestFile;
     } else {
       console.log('No files found in the specified folder.');

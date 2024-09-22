@@ -16,7 +16,7 @@ const backupDatabaseFile = 'backup-database.sqlite';
 export const sequelize = new Sequelize({
   dialect: 'sqlite',
   storage: `./${databaseFile}`,
-  // logging: false,
+  logging: false,
   dialectOptions: {
     ssl: {
       require: true,
@@ -41,17 +41,17 @@ export async function initDB() {
   try {
     const backupRestored = await restoreBackup();
     if (backupRestored) {
-      await sequelize.sync({ force: false, alter: true });
-      console.log('Database synced successfully');
-      
-      // Set up periodic backups
-      setInterval(createBackup, 1000 * 60); // Create backups every minute
+      console.log('Backup restored successfully');
     } else {
-      console.log('Backup restoration failed; sync skipped.');
+      console.log('Backup restoration failed; sync starting afresh');
     }
+
+    await sequelize.sync({ force: false, alter: true });
+    console.log('Database synced successfully');
   } catch (err) {
     console.error('Unable to sync database:', err);
   }
+  setInterval(createBackup, 1000 * 60); // Create backups every minute
 }
 
 // Function to copy the SQLite database file
