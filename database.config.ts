@@ -1,10 +1,12 @@
-import fs from 'fs';
+import axios from 'axios';
+import fs from 'fs/promises';
+import path from 'path';
 import sqlite3 from 'better-sqlite3';
 import { Profile, User } from './user.model';
 import { Sequelize } from 'sequelize-typescript';
 import {
+  fetchLatestUploadedFileInFolder,
   uploadRawFileToCloudinary,
-  uploadToCloudinary,
 } from './cloudinary.util';
 
 const databaseFile = 'database.sqlite';
@@ -36,6 +38,7 @@ export async function testConnection() {
 // Initialize Database
 export async function initDB() {
   try {
+    await restoreBackup();
     await sequelize.sync({ force: false, alter: true }); // `force: true` will drop tables
     console.log('Database synced successfully');
   } catch (err) {
@@ -51,7 +54,62 @@ export async function copyDatabaseFile() {
 }
 
 export async function createBackup() {
+  console.log('Creating backup');
   const isCopied = await copyDatabaseFile();
+  console.log('Uploading backup to cloudinary');
   if (isCopied)
     return await uploadRawFileToCloudinary(backupDatabaseFile, 'Backups');
 }
+
+export async function restoreBackup(): Promise<boolean> {
+  try {
+    // Fetch the latest backup file
+    const latest = await fetchLatestUploadedFileInFolder('Backups');
+
+    if (!latest) {
+      console.log('No backup found in the folder.');
+      return false;
+    }
+
+    const fileUrl = latest.secure_url; // Cloudinary URL of the latest file
+    const outputFilePath = path.join(__dirname, databaseFile); // Local file path
+
+    // Check if the file exists, and remove it if it does
+    try {
+      await fs.access(outputFilePath); // Check file existence
+      console.log('Existing database file found. Deleting it...');
+      await fs.unlink(outputFilePath); // Delete the file
+    } catch (error: any) {
+      if (error.code !== 'ENOENT') throw error; // Ignore if file doesn't exist
+    }
+
+    // Download and save the file
+    const response = await axios({
+      url: fileUrl,
+      method: 'GET',
+      responseType: 'stream', // Stream the response directly to the file system
+    });
+
+    const writer = await fs.open(outputFilePath, 'w');
+    response.data.pipe(writer.createWriteStream());
+
+    // Return a Promise that resolves when the download completes
+    return new Promise<boolean>((resolve, reject) => {
+      response.data.on('end', () => {
+        console.log('Backup restored successfully.');
+        writer.close();
+        resolve(true);
+      });
+
+      response.data.on('error', (err: any) => {
+        console.error('Error during download:', err);
+        reject(false);
+      });
+    });
+  } catch (error) {
+    console.error('Error restoring backup:', error);
+    return false;
+  }
+}
+
+setInterval(() => createBackup(), 1000 * 60 * 60); //create backups every hour

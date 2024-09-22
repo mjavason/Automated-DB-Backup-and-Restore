@@ -1,6 +1,6 @@
 # SQLite-DB-Backup-and-Restore
 
-Routinely package your database files and send them to the cloud. Incase of a restart, restore the latest version.
+Routinely package your database files and send them to the cloud. Incase of a restart, restore the latest version. Some bottlenecks to consider is overloading the cloud storage, and also there should be a way to check if the database hasnt changed.
 
 **Prerequisites**
 
