@@ -13,4 +13,4 @@ cloudinary.v2.config({
   api_secret: CLOUDINARY_API_SECRET,
 });
 
-export const cloudinaryInstance = cloudinary.v2.uploader;
+export const cloudinaryInstance = cloudinary.v2;
