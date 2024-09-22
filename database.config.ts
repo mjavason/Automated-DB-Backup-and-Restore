@@ -43,6 +43,9 @@ export async function initDB() {
     if (backupRestored) {
       await sequelize.sync({ force: false, alter: true });
       console.log('Database synced successfully');
+      
+      // Set up periodic backups
+      setInterval(createBackup, 1000 * 60); // Create backups every minute
     } else {
       console.log('Backup restoration failed; sync skipped.');
     }
@@ -59,7 +62,10 @@ export async function copyDatabaseFile() {
 
 // Function to get the size of the current database file
 async function getCurrentDatabaseSize(): Promise<number> {
-  const stats = await fsPromises.stat(databaseFile);
+  const db = sqlite3(databaseFile);
+  await db.backup(backupDatabaseFile);
+
+  const stats = await fsPromises.stat(backupDatabaseFile);
   return stats.size;
 }
 
@@ -137,6 +143,3 @@ export async function restoreBackup(): Promise<boolean> {
     return false;
   }
 }
-
-// Set up periodic backups
-// setInterval(createBackup, 1000 * 60); // Create backups every hour
