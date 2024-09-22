@@ -1,9 +1,18 @@
+import fs from 'fs';
+import sqlite3 from 'better-sqlite3';
+import { Profile, User } from './user.model';
 import { Sequelize } from 'sequelize-typescript';
-import { User, Profile } from './user.model';
+import {
+  uploadRawFileToCloudinary,
+  uploadToCloudinary,
+} from './cloudinary.util';
+
+const databaseFile = 'database.sqlite';
+const backupDatabaseFile = 'backup-database.sqlite';
 
 export const sequelize = new Sequelize({
   dialect: 'sqlite', // Choose your database dialect
-  storage: './database.sqlite',
+  storage: `./${databaseFile}`,
   logging: false,
   dialectOptions: {
     ssl: {
@@ -32,4 +41,17 @@ export async function initDB() {
   } catch (err) {
     console.error('Unable to sync database:', err);
   }
+}
+
+// Function to copy the SQLite database file
+export async function copyDatabaseFile() {
+  const db = sqlite3(databaseFile);
+  const file = await db.backup(backupDatabaseFile);
+  return file;
+}
+
+export async function createBackup() {
+  const isCopied = await copyDatabaseFile();
+  if (isCopied)
+    return await uploadRawFileToCloudinary(backupDatabaseFile, 'Backups');
 }

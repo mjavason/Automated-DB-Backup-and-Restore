@@ -1,0 +1,21 @@
+{
+  "result": {
+    "asset_id": "b61eb88be14e37f3eac0b3820644aa73",
+    "public_id": "Backups/lfrnlt72qcbahtsgmfkt.sqlite",
+    "version": 1727012236,
+    "version_id": "d12d646a84b3bc634bd15c1715a256b1",
+    "signature": "18492178accd51f64c2d785db46bc5a94bfbb4f5",
+    "resource_type": "raw",
+    "created_at": "2024-09-22T13:37:16Z",
+    "tags": [],
+    "bytes": 20480,
+    "type": "upload",
+    "etag": "e2304046b953c490814df35eba158b80",
+    "placeholder": false,
+    "url": "http://res.cloudinary.com/tech-aku/raw/upload/v1727012236/Backups/lfrnlt72qcbahtsgmfkt.sqlite",
+    "secure_url": "https://res.cloudinary.com/tech-aku/raw/upload/v1727012236/Backups/lfrnlt72qcbahtsgmfkt.sqlite",
+    "folder": "Backups",
+    "original_filename": "backup-database",
+    "api_key": "638798846756997"
+  }
+}

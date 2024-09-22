@@ -16,6 +16,22 @@ export const uploadToCloudinary = async (
   }
 };
 
+export const uploadRawFileToCloudinary = async (
+  filePath: string,
+  folder: string = 'Uploads'
+) => {
+  try {
+    const uploadResult = await cloudinaryInstance.uploader.upload(filePath, {
+      resource_type: 'raw', // Set resource type to 'raw'
+      folder,
+    });
+    console.log('Uploaded successfully:', uploadResult);
+    return uploadResult;
+  } catch (error) {
+    console.error('Error uploading to Cloudinary:', error);
+  }
+};
+
 // Delete a file from Cloudinary
 export const deleteFromCloudinary = async (public_id: string): Promise<any> => {
   try {

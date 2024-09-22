@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 import morgan from 'morgan';
 import { setupSwagger } from './swagger.config';
 import { Profile, User } from './user.model';
-import { initDB } from './database.config';
+import { copyDatabaseFile, createBackup, initDB } from './database.config';
 
 //#region App Setup
 const app = express();
@@ -22,6 +22,11 @@ app.use(morgan('dev'));
 setupSwagger(app, BASE_URL);
 
 //#endregion App Setup
+
+app.get('/copy', async (req, res) => {
+  const result = await createBackup();
+  return res.send({ result });
+});
 
 //#region Code here
 /**
@@ -307,7 +312,7 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 });
 
 app.listen(PORT, async () => {
-  initDB()
+  initDB();
   console.log(`Server running on port ${PORT}`);
 });
 
