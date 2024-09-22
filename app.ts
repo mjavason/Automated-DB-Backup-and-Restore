@@ -7,6 +7,7 @@ import morgan from 'morgan';
 import { setupSwagger } from './swagger.config';
 import { Profile, User } from './user.model';
 import { copyDatabaseFile, createBackup, initDB } from './database.config';
+import { fetchLatestUploadedFileInFolder } from './cloudinary.util';
 
 //#region App Setup
 const app = express();
@@ -22,6 +23,11 @@ app.use(morgan('dev'));
 setupSwagger(app, BASE_URL);
 
 //#endregion App Setup
+
+app.get('/latest', async (req, res) => {
+  const result = await fetchLatestUploadedFileInFolder('Backups');
+  return res.send({ result });
+});
 
 app.get('/copy', async (req, res) => {
   const result = await createBackup();

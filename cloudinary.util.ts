@@ -112,3 +112,29 @@ export const deleteCloudinaryFolder = async (folder: string): Promise<any> => {
     throw new Error('Failed to delete Cloudinary folder');
   }
 };
+
+export const fetchLatestUploadedFileInFolder = async (
+  folder: string = 'Uploads'
+) => {
+  try {
+    const response = await cloudinaryInstance.api.resources({
+      type: 'upload',
+      prefix: folder,
+      max_results: 1, // We only want the latest file
+      sort: 'created_at', // Sort by creation date
+      direction: 'desc', // Get the most recent first
+      resource_type: 'raw' // This stuff stressed me
+    });
+
+    if (response.resources.length > 0) {
+      const latestFile = response.resources[0];
+      console.log('Latest uploaded file:', latestFile);
+      return latestFile;
+    } else {
+      console.log('No files found in the specified folder.');
+      return null;
+    }
+  } catch (error) {
+    console.error('Error fetching latest uploaded file:', error);
+  }
+};
