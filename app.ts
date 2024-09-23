@@ -8,6 +8,7 @@ import { setupSwagger } from './swagger.config';
 import { Profile, User } from './user.model';
 import { copyDatabaseFile, createBackup, initDB } from './database.config';
 import {
+  deleteOldFilesInFolder,
   fetchLatestUploadedFileInFolder,
   listFilesInCloudinaryFolder,
 } from './cloudinary.util';

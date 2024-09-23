@@ -6,6 +6,7 @@ import sqlite3 from 'better-sqlite3';
 import { Profile, User } from './user.model';
 import { Sequelize } from 'sequelize-typescript';
 import {
+  deleteOldFilesInFolder,
   fetchLatestUploadedFileInFolder,
   uploadRawFileToCloudinary,
 } from './cloudinary.util';
@@ -52,6 +53,7 @@ export async function initDB() {
     console.error('Unable to sync database:', err);
   }
   setInterval(createBackup, 1000 * 60); // Create backups every minute
+  setInterval(() => deleteOldFilesInFolder('Backups', 3), 1000 * 60 * 60 * 24); // Delete old backups once a day
 }
 
 // Function to copy the SQLite database file

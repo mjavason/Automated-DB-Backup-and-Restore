@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { cloudinaryInstance } from './cloudinary.config';
 
 // Upload a file to Cloudinary
@@ -146,3 +147,44 @@ export async function fetchLatestUploadedFileInFolder(
     return null;
   }
 }
+
+export const deleteOldFilesInFolder = async (folder: string, ageInDays: number) => {
+  try {
+    // Fetch all resources in the folder
+    const response = await cloudinaryInstance.api.resources({
+      type: 'upload',
+      prefix: folder,
+      max_results: 500, // Fetch up to 500 files
+      resource_type: 'raw', // Fetch raw files
+    });
+
+    if (response.resources.length === 0) {
+      console.log('No files found in the specified folder.');
+      return;
+    }
+
+    const threeDaysAgo = dayjs().subtract(ageInDays, 'days').toDate();
+
+    const oldFiles = response.resources.filter((file: any) => {
+      const createdAt = new Date(file.created_at);
+      return createdAt < threeDaysAgo; // Check if file is older than 3 days
+    });
+
+    if (oldFiles.length === 0) {
+      console.log('No files older than 3 days found.');
+      return;
+    }
+
+    // Delete all old files
+    for (const file of oldFiles) {
+      await cloudinaryInstance.api.delete_resources([file.public_id]);
+      console.log(`Deleted file: ${file.public_id}`);
+    }
+
+    console.log(
+      `Successfully deleted ${oldFiles.length} files older than 3 days.`
+    );
+  } catch (error) {
+    console.error('Error deleting old files:', error);
+  }
+};
